@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ensureDb } from "@/lib/db";
+import { ensureDb, serializeRows } from "@/lib/db";
 import { randomUUID } from "crypto";
 
 export async function GET() {
@@ -13,7 +13,8 @@ export async function GET() {
     JOIN clients c ON c.id = a.client_id
     ORDER BY a.date ASC
   `);
-  return NextResponse.json(rows.rows);
+  return NextResponse.json(serializeRows(rows.rows as Record<string, unknown>[]));
+
 }
 
 export async function POST(req: NextRequest) {

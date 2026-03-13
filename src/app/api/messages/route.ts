@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ensureDb } from "@/lib/db";
+import { ensureDb, serializeRows } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   const phone = req.nextUrl.searchParams.get("phone");
@@ -16,5 +16,6 @@ export async function GET(req: NextRequest) {
     args: [clientId],
   });
 
-  return NextResponse.json(messages.rows);
+  return NextResponse.json(serializeRows(messages.rows as Record<string, unknown>[]));
+
 }

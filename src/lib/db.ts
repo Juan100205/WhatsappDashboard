@@ -1,5 +1,14 @@
 import { createClient } from "@libsql/client";
 
+// libSQL devuelve INTEGER como BigInt — lo convertimos a number para JSON
+export function serializeRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
+  return rows.map(row =>
+    Object.fromEntries(
+      Object.entries(row).map(([k, v]) => [k, typeof v === "bigint" ? Number(v) : v])
+    )
+  );
+}
+
 export const db = createClient({
   url:       process.env.TURSO_DATABASE_URL ?? "file:vecino-alquila.db",
   authToken: process.env.TURSO_AUTH_TOKEN,
