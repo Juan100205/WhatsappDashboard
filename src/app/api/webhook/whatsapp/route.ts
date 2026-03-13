@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import db from "@/lib/db";
+import { ensureDb } from "@/lib/db";
 import { randomUUID } from "crypto";
 
-// ─── POST: recibe mensajes ya procesados desde n8n ────────────────
-// Payload esperado:
-// { phone, name, message, reply, type }
 export async function POST(req: NextRequest) {
   const body = await req.json();
+
   const contact = body?.ContactInfo?.[0];
   const msg     = body?.MensajeInfo?.[0];
 
@@ -21,45 +19,50 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const db  = await ensureDb();
     const now = new Date().toISOString();
 
     // 1. Upsert cliente
-    const existing = db
-      .prepare("SELECT id FROM clients WHERE phone = ?")
-      .get(phone) as { id: string } | undefined;
+    const existing = await db.execute({ sql: "SELECT id FROM clients WHERE phone = ?", args: [phone] });
 
     let clientId: string;
 
-    if (existing) {
-      clientId = existing.id;
-      db.prepare(
-        "UPDATE clients SET name = ?, last_interaction = ?, message_count = message_count + 1 WHERE id = ?"
-      ).run(name ?? "Cliente", now, clientId);
+    if (existing.rows.length > 0) {
+      clientId = existing.rows[0].id as string;
+      await db.execute({
+        sql:  "UPDATE clients SET name = ?, last_interaction = ?, message_count = message_count + 1 WHERE id = ?",
+        args: [name, now, clientId],
+      });
     } else {
       clientId = randomUUID();
-      db.prepare(
-        "INSERT INTO clients (id, name, phone, created_at, last_interaction, message_count) VALUES (?, ?, ?, ?, ?, 1)"
-      ).run(clientId, name ?? "Cliente", phone, now, now);
+      await db.execute({
+        sql:  "INSERT INTO clients (id, name, phone, created_at, last_interaction, message_count) VALUES (?, ?, ?, ?, ?, 1)",
+        args: [clientId, name, phone, now, now],
+      });
     }
 
     // 2. Guardar mensaje del usuario
-    db.prepare(
-      "INSERT INTO messages (id, client_id, role, type, message, timestamp) VALUES (?, ?, 'user', ?, ?, ?)"
-    ).run(randomUUID(), clientId, type, message, now);
+    await db.execute({
+      sql:  "INSERT INTO messages (id, client_id, role, type, message, timestamp) VALUES (?, ?, 'user', ?, ?, ?)",
+      args: [randomUUID(), clientId, type, message, now],
+    });
 
-    db.prepare(
-      "INSERT INTO analytics_events (id, type, client_phone, timestamp) VALUES (?, 'message_received', ?, ?)"
-    ).run(randomUUID(), phone, now);
+    await db.execute({
+      sql:  "INSERT INTO analytics_events (id, type, client_phone, timestamp) VALUES (?, 'message_received', ?, ?)",
+      args: [randomUUID(), phone, now],
+    });
 
-    // 3. Guardar respuesta del asistente (si viene)
+    // 3. Guardar respuesta del asistente
     if (reply) {
-      db.prepare(
-        "INSERT INTO messages (id, client_id, role, type, message, timestamp) VALUES (?, ?, 'assistant', 'text', ?, ?)"
-      ).run(randomUUID(), clientId, reply, now);
+      await db.execute({
+        sql:  "INSERT INTO messages (id, client_id, role, type, message, timestamp) VALUES (?, ?, 'assistant', 'text', ?, ?)",
+        args: [randomUUID(), clientId, reply, now],
+      });
 
-      db.prepare(
-        "INSERT INTO analytics_events (id, type, client_phone, timestamp) VALUES (?, 'message_sent', ?, ?)"
-      ).run(randomUUID(), phone, now);
+      await db.execute({
+        sql:  "INSERT INTO analytics_events (id, type, client_phone, timestamp) VALUES (?, 'message_sent', ?, ?)",
+        args: [randomUUID(), phone, now],
+      });
     }
 
     return NextResponse.json({ status: "ok" });

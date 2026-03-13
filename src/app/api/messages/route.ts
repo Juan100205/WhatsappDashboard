@@ -1,19 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import db from "@/lib/db";
+import { ensureDb } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   const phone = req.nextUrl.searchParams.get("phone");
   if (!phone) return NextResponse.json({ error: "phone requerido" }, { status: 400 });
 
-  const client = db
-    .prepare("SELECT id FROM clients WHERE phone = ?")
-    .get(phone) as { id: string } | undefined;
+  const db = await ensureDb();
 
-  if (!client) return NextResponse.json([]);
+  const clientRes = await db.execute({ sql: "SELECT id FROM clients WHERE phone = ?", args: [phone] });
+  if (clientRes.rows.length === 0) return NextResponse.json([]);
 
-  const messages = db
-    .prepare("SELECT * FROM messages WHERE client_id = ? ORDER BY timestamp ASC")
-    .all(client.id);
+  const clientId = clientRes.rows[0].id;
+  const messages = await db.execute({
+    sql:  "SELECT * FROM messages WHERE client_id = ? ORDER BY timestamp ASC",
+    args: [clientId],
+  });
 
-  return NextResponse.json(messages);
+  return NextResponse.json(messages.rows);
 }

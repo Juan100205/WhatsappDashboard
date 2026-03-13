@@ -11,9 +11,9 @@
     "test:coverage": "jest --coverage --forceExit"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.0",
     "@supabase/supabase-js": "^2.99.1",
     "axios": "^1.7.2",
-    "better-sqlite3": "^12.6.2",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
     "lucide-react": "^0.400.0",
@@ -27,7 +27,6 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/jest": "^30.0.0",
     "@types/node": "^20",
     "@types/react": "^18",

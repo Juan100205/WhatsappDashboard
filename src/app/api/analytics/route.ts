@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
-import db from "@/lib/db";
+import { ensureDb } from "@/lib/db";
 
 export async function GET() {
+  const db           = await ensureDb();
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  const events      = db.prepare("SELECT * FROM analytics_events WHERE timestamp >= ? ORDER BY timestamp DESC").all(sevenDaysAgo) as { type: string; timestamp: string; client_phone: string }[];
-  const clients     = db.prepare("SELECT COUNT(*) as count FROM clients").get() as { count: number };
-  const appointments = db.prepare("SELECT status FROM appointments").all() as { status: string }[];
+  const [eventsRes, clientsRes, appointmentsRes] = await Promise.all([
+    db.execute({ sql: "SELECT * FROM analytics_events WHERE timestamp >= ? ORDER BY timestamp DESC", args: [sevenDaysAgo] }),
+    db.execute("SELECT COUNT(*) as count FROM clients"),
+    db.execute("SELECT status FROM appointments"),
+  ]);
+
+  const events       = eventsRes.rows as unknown as { type: string; timestamp: string; client_phone: string }[];
+  const clientCount  = (clientsRes.rows[0] as unknown as { count: number }).count;
+  const appointments = appointmentsRes.rows as unknown as { status: string }[];
 
   // Agrupar por día
   const byDay: Record<string, { messages_received: number; messages_sent: number; appointments: number }> = {};
@@ -26,7 +33,7 @@ export async function GET() {
   });
 
   return NextResponse.json({
-    clients:      clients.count,
+    clients:      clientCount,
     appointments: appointments.filter(a => a.status !== "cancelled").length,
     audios:       events.filter(e => e.type === "audio_transcribed").length,
     messages:     events.filter(e => e.type === "message_received").length,
