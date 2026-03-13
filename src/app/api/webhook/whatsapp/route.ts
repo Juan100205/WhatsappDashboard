@@ -67,7 +67,8 @@ export async function POST(req: NextRequest) {
 
     // 4. Guardar cita si el asistente agendó una
     const apt = body?.appointment;
-    if (apt?.created === true && apt?.date) {
+    const aptCreated = apt?.created === true || apt?.created === "true";
+    if (aptCreated && apt?.date) {
       await db.execute({
         sql:  "INSERT INTO appointments (id, client_id, date, notes, calendar_event_id, created_at) VALUES (?, ?, ?, ?, ?, ?)",
         args: [randomUUID(), clientId, apt.date, apt.notes ?? "", "", now],
