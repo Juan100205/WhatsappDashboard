@@ -65,6 +65,20 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // 4. Guardar cita si el asistente agendó una
+    const apt = body?.appointment;
+    if (apt?.created === true && apt?.date) {
+      await db.execute({
+        sql:  "INSERT INTO appointments (id, client_id, date, notes, calendar_event_id, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        args: [randomUUID(), clientId, apt.date, apt.notes ?? "", "", now],
+      });
+
+      await db.execute({
+        sql:  "INSERT INTO analytics_events (id, type, client_phone, timestamp) VALUES (?, 'appointment_created', ?, ?)",
+        args: [randomUUID(), phone, now],
+      });
+    }
+
     return NextResponse.json({ status: "ok" });
   } catch (error) {
     console.error("Error procesando mensaje:", error);
