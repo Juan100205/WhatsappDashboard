@@ -39,12 +39,18 @@ const config: Config = {
           from: { opacity: "0", transform: "scale(0.95)" },
           to:   { opacity: "1", transform: "scale(1)" },
         },
+        bounceIn: {
+          "0%":   { opacity: "0", transform: "scale(0.85) translateY(8px)" },
+          "60%":  { opacity: "1", transform: "scale(1.04) translateY(-2px)" },
+          "100%": { opacity: "1", transform: "scale(1) translateY(0)" },
+        },
       },
       animation: {
         "fade-in-up":    "fadeInUp 0.35s ease-out both",
         "fade-in":       "fadeIn 0.25s ease-out both",
         "slide-in-left": "slideInLeft 0.3s ease-out both",
         "scale-in":      "scaleIn 0.2s ease-out both",
+        "bounce-in":     "bounceIn 0.4s ease-out both",
       },
     },
   },

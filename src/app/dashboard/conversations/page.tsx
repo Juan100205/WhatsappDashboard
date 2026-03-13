@@ -1,17 +1,17 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Search, Mic, Bot } from "lucide-react";
 import { timeAgo, cn, safeArray } from "@/lib/utils";
 import type { Client, Message } from "@/types";
 
-function AudioBubble({ message }: { message: Message }) {
+// ─── Burbujas ─────────────────────────────────────────────────────
+function AudioBubble({ message, isNew }: { message: Message; isNew: boolean }) {
   const [open, setOpen] = useState(false);
   const isUser = message.role === "user";
   return (
-    <div className={cn("flex mb-3 animate-fade-in-up", isUser ? "justify-start" : "justify-end")}>
+    <div className={cn("flex mb-3", isUser ? "justify-start" : "justify-end", isNew ? "animate-bounce-in" : "animate-fade-in-up")}>
       <div className="max-w-[75%] space-y-1">
-        <div className={cn(
-          "rounded-2xl px-4 py-3 shadow-sm flex items-center gap-3",
+        <div className={cn("rounded-2xl px-4 py-3 shadow-sm flex items-center gap-3",
           isUser ? "bg-white rounded-tl-none" : "bg-primary-300 rounded-tr-none text-gray-900"
         )}>
           <Mic className={cn("w-4 h-4", isUser ? "text-primary-500" : "text-gray-700")} />
@@ -30,12 +30,11 @@ function AudioBubble({ message }: { message: Message }) {
   );
 }
 
-function TextBubble({ message }: { message: Message }) {
+function TextBubble({ message, isNew }: { message: Message; isNew: boolean }) {
   const isUser = message.role === "user";
   return (
-    <div className={cn("flex mb-3 animate-fade-in-up", isUser ? "justify-start" : "justify-end")}>
-      <div className={cn(
-        "max-w-[75%] rounded-2xl px-4 py-2.5 shadow-sm text-sm",
+    <div className={cn("flex mb-3", isUser ? "justify-start" : "justify-end", isNew ? "animate-bounce-in" : "animate-fade-in-up")}>
+      <div className={cn("max-w-[75%] rounded-2xl px-4 py-2.5 shadow-sm text-sm",
         isUser ? "bg-white rounded-tl-none text-gray-800" : "bg-primary-300 rounded-tr-none text-gray-900"
       )}>
         <p>{message.message}</p>
@@ -50,33 +49,98 @@ function TextBubble({ message }: { message: Message }) {
   );
 }
 
+// ─── Página principal ─────────────────────────────────────────────
 export default function ConversationsPage() {
-  const [clients, setClients]   = useState<Client[]>([]);
-  const [selected, setSelected] = useState<Client | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [search, setSearch]     = useState("");
-  const [loading, setLoading]   = useState(true);
-  const [loadingMsgs, setLoadingMsgs] = useState(false);
+  const [clients, setClients]       = useState<Client[]>([]);
+  const [selected, setSelected]     = useState<Client | null>(null);
+  const [messages, setMessages]     = useState<Message[]>([]);
+  const [search, setSearch]         = useState("");
+  const [loading, setLoading]       = useState(true);
+  const [newClientIds, setNewClientIds] = useState<Set<string>>(new Set());
+  const [newMsgIds, setNewMsgIds]   = useState<Set<string>>(new Set());
 
+  const clientIdsRef  = useRef<Set<string>>(new Set());
+  const msgIdsRef     = useRef<Set<string>>(new Set());
+  const selectedRef   = useRef<Client | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  selectedRef.current = selected;
+
+  // Scroll al último mensaje
   useEffect(() => {
-    fetch("/api/clients")
-      .then(r => r.json())
-      .then((data: unknown) => {
-        const clients = safeArray<Client>(data);
-        setClients(clients);
-        if (clients.length > 0) setSelected(clients[0]);
-      })
-      .finally(() => setLoading(false));
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // ─── Fetch clientes ────────────────────────────────────────────
+  const fetchClients = useCallback(async () => {
+    try {
+      const res  = await fetch("/api/clients");
+      const data = await res.json();
+      const list = safeArray<Client>(data);
+
+      const incoming  = new Set(list.map(c => c.id));
+      const freshIds  = list.filter(c => !clientIdsRef.current.has(c.id)).map(c => c.id);
+
+      if (freshIds.length > 0) {
+        setNewClientIds(prev => new Set(Array.from(prev).concat(freshIds)));
+        // Limpiar highlight después de 3s
+        setTimeout(() => setNewClientIds(prev => {
+          const next = new Set(prev);
+          freshIds.forEach(id => next.delete(id));
+          return next;
+        }), 3000);
+      }
+
+      clientIdsRef.current = incoming;
+      setClients(list);
+
+      // Auto-seleccionar primer cliente si no hay ninguno seleccionado
+      if (!selectedRef.current && list.length > 0) {
+        setSelected(list[0]);
+      }
+    } catch {/* silencioso */}
+    finally { setLoading(false); }
   }, []);
+
+  // ─── Fetch mensajes ────────────────────────────────────────────
+  const fetchMessages = useCallback(async () => {
+    const current = selectedRef.current;
+    if (!current) return;
+    try {
+      const res  = await fetch(`/api/messages?phone=${encodeURIComponent(current.phone)}`);
+      const data = await res.json();
+      const list = safeArray<Message>(data);
+
+      const freshIds = list.filter(m => !msgIdsRef.current.has(m.id)).map(m => m.id);
+
+      if (freshIds.length > 0) {
+        msgIdsRef.current = new Set(list.map(m => m.id));
+        setNewMsgIds(prev => new Set(Array.from(prev).concat(freshIds)));
+        setTimeout(() => setNewMsgIds(prev => {
+          const next = new Set(prev);
+          freshIds.forEach(id => next.delete(id));
+          return next;
+        }), 2000);
+      }
+
+      setMessages(list);
+    } catch {/* silencioso */}
+  }, []);
+
+  // ─── Polling ────────────────────────────────────────────────────
+  useEffect(() => {
+    fetchClients();
+    const t = setInterval(fetchClients, 4000);
+    return () => clearInterval(t);
+  }, [fetchClients]);
 
   useEffect(() => {
     if (!selected) return;
-    setLoadingMsgs(true);
-    fetch(`/api/messages?phone=${encodeURIComponent(selected.phone)}`)
-      .then(r => r.json())
-      .then((data: unknown) => setMessages(safeArray<Message>(data)))
-      .finally(() => setLoadingMsgs(false));
-  }, [selected]);
+    msgIdsRef.current = new Set();
+    fetchMessages();
+    const t = setInterval(fetchMessages, 3000);
+    return () => clearInterval(t);
+  }, [selected, fetchMessages]);
 
   const filtered = clients.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -85,10 +149,13 @@ export default function ConversationsPage() {
 
   return (
     <div className="flex h-full">
-      {/* Left panel */}
+      {/* Panel izquierdo */}
       <div className="w-80 border-r border-gray-200 bg-white flex flex-col flex-shrink-0 animate-slide-in-left">
         <div className="px-4 py-4 border-b border-gray-100">
-          <h1 className="font-bold text-gray-900 mb-3">Conversaciones</h1>
+          <div className="flex items-center justify-between mb-3">
+            <h1 className="font-bold text-gray-900">Conversaciones</h1>
+            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" title="En vivo" />
+          </div>
           <div className="relative">
             <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
             <input
@@ -99,25 +166,27 @@ export default function ConversationsPage() {
             />
           </div>
         </div>
+
         <div className="flex-1 overflow-y-auto">
-          {loading && (
-            <div className="flex items-center justify-center h-32 text-gray-400 text-sm">Cargando...</div>
-          )}
-          {!loading && filtered.length === 0 && (
-            <div className="flex items-center justify-center h-32 text-gray-400 text-sm">Sin conversaciones</div>
-          )}
+          {loading && <div className="flex items-center justify-center h-32 text-gray-400 text-sm">Cargando...</div>}
+          {!loading && filtered.length === 0 && <div className="flex items-center justify-center h-32 text-gray-400 text-sm">Sin conversaciones</div>}
           {filtered.map((client, i) => {
-            const active = selected?.id === client.id;
+            const active  = selected?.id === client.id;
+            const isNew   = newClientIds.has(client.id);
             return (
               <button key={client.id} onClick={() => setSelected(client)}
                 style={{ animationDelay: `${i * 40}ms` }}
                 className={cn(
-                  "animate-fade-in w-full flex items-start gap-3 px-4 py-3.5 border-b border-gray-50 text-left transition-all duration-150",
-                  active ? "bg-primary-50 border-l-2 border-l-primary-400" : "hover:bg-gray-50"
+                  "w-full flex items-start gap-3 px-4 py-3.5 border-b border-gray-50 text-left transition-all duration-300",
+                  active  ? "bg-primary-50 border-l-2 border-l-primary-400" : "hover:bg-gray-50",
+                  isNew   ? "animate-bounce-in ring-1 ring-green-300 bg-green-50" : "animate-fade-in"
                 )}
               >
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-300 to-primary-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                  {client.name[0]}
+                <div className="relative">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-300 to-primary-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                    {client.name[0]}
+                  </div>
+                  {isNew && <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white animate-ping" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
@@ -132,7 +201,7 @@ export default function ConversationsPage() {
         </div>
       </div>
 
-      {/* Right panel */}
+      {/* Panel derecho */}
       <div className="flex-1 flex flex-col bg-gray-50 min-w-0 animate-fade-in">
         {selected ? (
           <>
@@ -153,20 +222,22 @@ export default function ConversationsPage() {
                 </span>
               </div>
             </div>
+
             <div className="flex-1 overflow-y-auto px-6 py-4">
-              {loadingMsgs ? (
-                <div className="flex items-center justify-center h-full text-gray-400 text-sm animate-fade-in">Cargando mensajes...</div>
-              ) : messages.length === 0 ? (
+              {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-gray-400 animate-fade-in">
                   <EmptyIcon />
                   <p className="mt-3 text-sm">No hay mensajes aún</p>
                 </div>
               ) : (
-                messages.map(msg =>
-                  msg.type === "audio"
-                    ? <AudioBubble key={msg.id} message={msg} />
-                    : <TextBubble key={msg.id} message={msg} />
-                )
+                <>
+                  {messages.map(msg =>
+                    msg.type === "audio"
+                      ? <AudioBubble key={msg.id} message={msg} isNew={newMsgIds.has(msg.id)} />
+                      : <TextBubble  key={msg.id} message={msg} isNew={newMsgIds.has(msg.id)} />
+                  )}
+                  <div ref={messagesEndRef} />
+                </>
               )}
             </div>
           </>
