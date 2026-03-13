@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"C:\\\\Users\\\\juanj\\\\Documents\\\\Vecino Alquila\" && npm install 2>&1 | tail -5)",
+      "Bash(cd \"C:\\\\Users\\\\juanj\\\\Documents\\\\Vecino Alquila\" && npx next build 2>&1 | tail -20)",
+      "Bash(cd \"C:\\\\Users\\\\juanj\\\\Documents\\\\Vecino Alquila\" && mv next.config.ts next.config.mjs && echo \"/** @type {import\\('next'\\).NextConfig} */\nconst nextConfig = {};\nexport default nextConfig;\" > next.config.mjs && npx next build 2>&1 | tail -20)",
+      "Bash(cd \"C:\\\\Users\\\\juanj\\\\Documents\\\\Vecino Alquila\" && npx next build 2>&1)",
+      "Bash(xxd \"/c/Users/juanj/Documents/Vecino Alquila/.env\" | head -50)",
+      "Bash(cd \"/c/Users/juanj/Documents/Vecino Alquila\" && npm install @supabase/supabase-js openai 2>&1 | tail -5)",
+      "Bash(cd \"/c/Users/juanj/Documents/Vecino Alquila\" && npx tsc --noEmit 2>&1)",
+      "Bash(cd \"/c/Users/juanj/Documents/Vecino Alquila\" && npm install -D jest jest-environment-jsdom @testing-library/react @testing-library/jest-dom @testing-library/user-event @types/jest 2>&1 | tail -5)",
+      "Bash(cd \"/c/Users/juanj/Documents/Vecino Alquila\" && npx jest --no-coverage 2>&1 | head -60)",
+      "Bash(cd \"/c/Users/juanj/Documents/Vecino Alquila\" && npm install -D ts-jest 2>&1 | tail -3)",
+      "Bash(cd \"/c/Users/juanj/Documents/Vecino Alquila\" && npx jest --no-coverage --testPathPattern=\"unit\" 2>&1)",
+      "Bash(cd \"/c/Users/juanj/Documents/Vecino Alquila\" && npx jest --no-coverage --testPathPatterns=\"unit\" 2>&1)",
+      "Bash(cd \"/c/Users/juanj/Documents/Vecino Alquila\" && npx jest --no-coverage --testPathPatterns=\"api\" 2>&1)",
+      "Bash(cd \"/c/Users/juanj/Documents/Vecino Alquila\" && npm test 2>&1 | tail -15)",
+      "Bash(cd \"C:\\\\Users\\\\juanj\\\\Documents\\\\Vecino Alquila\" && npm install better-sqlite3 && npm install -D @types/better-sqlite3)",
+      "Bash(cd \"C:\\\\Users\\\\juanj\\\\Documents\\\\Vecino Alquila\" && npx tsc --noEmit 2>&1 | head -50)",
+      "Bash(winget install:*)",
+      "Bash(ngrok update:*)",
+      "Bash(cmd /c \"ngrok update\" 2>&1)",
+      "Bash(cmd /c \"npx localtunnel --port 3000\" 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\juanj\\\\Documents\\\\Vecino Alquila\" && cmd /c \"node -e \\\\\"const db = require\\('better-sqlite3'\\)\\('vecino-alquila.db'\\); console.log\\('CLIENTS:', JSON.stringify\\(db.prepare\\('SELECT * FROM clients'\\).all\\(\\), null, 2\\)\\); console.log\\('MESSAGES:', JSON.stringify\\(db.prepare\\('SELECT * FROM messages'\\).all\\(\\), null, 2\\)\\); console.log\\('ANALYTICS:', JSON.stringify\\(db.prepare\\('SELECT * FROM analytics_events'\\).all\\(\\), null, 2\\)\\);\\\\\"\")",
+      "Bash(cd \"C:\\\\Users\\\\juanj\\\\Documents\\\\Vecino Alquila\" && ls *.db 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\juanj\\\\Documents\\\\Vecino Alquila\" && node -e \"const Database = require\\('better-sqlite3'\\); const db = new Database\\('vecino-alquila.db'\\); console.log\\('CLIENTS:', JSON.stringify\\(db.prepare\\('SELECT * FROM clients'\\).all\\(\\)\\)\\); console.log\\('MESSAGES:', JSON.stringify\\(db.prepare\\('SELECT * FROM messages'\\).all\\(\\)\\)\\); console.log\\('ANALYTICS:', JSON.stringify\\(db.prepare\\('SELECT * FROM analytics_events'\\).all\\(\\)\\)\\);\")",
+      "Bash(cmd /c \"cloudflared tunnel --url http://localhost:3000\" 2>&1)",
+      "Bash(cmd /c \"where cloudflared\" 2>&1)",
+      "Read(//c/Program Files \\(x86\\)/cloudflared/**)",
+      "Read(//c/Program Files/**)",
+      "Bash(cmd /c \"dir /s /b C:\\\\cloudflared.exe 2>nul & dir /s /b C:\\\\Users\\\\juanj\\\\cloudflared.exe 2>nul & dir /s /b \\\\\"C:\\\\Program Files\\\\cloudflared.exe\\\\\" 2>nul\")",
+      "Bash(cmd /c \"dir /s /b C:\\\\Windows\\\\System32\\\\cloudflared.exe 2>nul & dir /s /b C:\\\\ProgramData\\\\chocolatey\\\\bin\\\\cloudflared.exe 2>nul\")",
+      "Read(//mnt/c/Windows/System32/**)"
+    ]
+  }
+}
